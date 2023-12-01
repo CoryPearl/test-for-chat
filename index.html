@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Local Storage Chat</title>
+    <title>Real-time Chat</title>
 </head>
 <body>
     <div id="chat-box"></div>
@@ -13,51 +13,51 @@
     <script>
         const chatBox = document.getElementById('chat-box');
         const messageInput = document.getElementById('message-input');
+        let ws;
+
+        function connectWebSocket() {
+            ws = new WebSocket('ws://your-websocket-server-url');
+
+            ws.onopen = (event) => {
+                console.log('WebSocket connection opened:', event);
+            };
+
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                displayMessage(message);
+            };
+
+            ws.onclose = (event) => {
+                console.log('WebSocket connection closed:', event);
+            };
+        }
 
         function displayMessage(message) {
             const messageElement = document.createElement('div');
-            messageElement.textContent = message;
+            messageElement.textContent = `${message.sender}: ${message.text}`;
             chatBox.appendChild(messageElement);
         }
 
         function sendMessage() {
             const messageText = messageInput.value.trim();
             if (messageText !== '') {
-                const message = `You: ${messageText}`;
+                const message = {
+                    sender: 'You',
+                    text: messageText,
+                };
 
                 // Display your own message immediately
                 displayMessage(message);
 
-                // Save the message in Local Storage
-                const existingMessages = localStorage.getItem('chatMessages') || '[]';
-                const messages = JSON.parse(existingMessages);
-                messages.push(message);
-                localStorage.setItem('chatMessages', JSON.stringify(messages));
+                // Send the message to other clients through WebSocket
+                ws.send(JSON.stringify(message));
 
                 // Clear input field
                 messageInput.value = '';
             }
         }
 
-        function handleStorageEvent(event) {
-            if (event.key === 'chatMessages') {
-                // Display messages when Local Storage changes
-                displayStoredMessages();
-            }
-        }
-
-        function displayStoredMessages() {
-            const existingMessages = localStorage.getItem('chatMessages') || '[]';
-            const messages = JSON.parse(existingMessages);
-            chatBox.innerHTML = '';
-            messages.forEach(displayMessage);
-        }
-
-        // Display messages on page load
-        displayStoredMessages();
-
-        // Listen for changes in Local Storage
-        window.addEventListener('storage', handleStorageEvent);
+        connectWebSocket();
     </script>
 </body>
 </html>
